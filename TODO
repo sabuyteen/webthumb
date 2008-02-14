@@ -1,0 +1,76 @@
+
+
+
+    
+
+    
+
+*** ISSUES THAT MUST BE FIXED BEFORE WE GO LIVE ***
+
+    - Write a quick unit test that fetches a bunch of blogs with 10 thread and
+      saves their thumbnails to disk for verification. 
+
+    - FIXME: determine the XServer Id from the lock ID 
+      
+    - DISABLE SSL WARNINGS ... see ssl-warning.jpg
+
+    - If for some reason Mozilla (or the x-server) fails... we need to restart.
+      This should probably be with a crontab ...
+
+        - The crontab should just:
+
+            - Shutdown Apache (which is probably not a good idea on a multi-user box)
+            - Shutdown webthumb
+            - Remove all the tmp files.
+            - Startup webthumb.
+            
+    - find script that deletes older files...
+
+    - Enter username and password for 
+
+    - "The operation timed out when attempting to contact"
+
+    - Enable a DEBUG mode so that I can preserve the ORIGINAL thumbnail for
+      later debug.
+
+    - Make SURE Mozilla isn't running on the same X server.
+
+        .lock file symlinks to the process id.
+    
+    - Do NOT run Mozilla or Xvfb as root... run them as 'webthumb'.
+
+        - Create a FULL init script for this.
+
+    - Write a script which pings the system and makes 100% sure it's working.
+      Send off an email if not.
+
+    - Install on test.sofari.com
+
+*** SECONDARY ISSUES ***
+
+- #FIXME: make this string easier to recognize and grep MUST for it to
+  #prevent another page loading resulting in a correct thumbnail.
+
+    For example if we ask to load http://www.boingboing.net it might say it loaded
+
+        http://boingboing.net/ (without the www and with a trailing /)
+
+        This MIGHT be the most elegent approach because of 302 redirects.
+
+- Disable javascript in the browser and all the options.
+
+- find and delete crontab to delete older thumbnails.
+
+- http://peerfear.org/cgi-bin/webthumb.cgi?resource=http://boingboing.net
+
+- http://slashdot.org/article.pl?sid=03/12/10/1742212&mode=thread&tid=101&tid=188&tid=97
+  http%3A//slashdot.org/article.pl%3Fsid%3D03/12/10/1742212%26mode%3Dthread%26tid%3D101%26tid%3D188%26tid%3D97
+
+    http://peerfear.org/cgi-bin/webthumb.cgi?resource=http://www.geekcruises.com/top/sql_top.htm
+
+- Unit tests for all functions
+
+    - disney.com
+    - nyt.com
+
+    

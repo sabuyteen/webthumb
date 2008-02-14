@@ -1,0 +1,323 @@
+#!/bin/sh
+
+#Total num of webthumb daemons running that we can connect to.
+INSTANCE_COUNT=10
+
+LOG_ENABLED=true
+LOCK_FILE=/tmp/webthumb-1.lock
+MOZILLA_LOG=/tmp/webthumb-1.dat
+LOG_FILE=/tmp/webthumb-1.log
+
+SLEEP_INTERVAL=.2
+MAX_INTERVAL=30.0
+
+URLBASE=/webthumb
+
+function die {
+    msg=$1
+    log "$msg"
+    releaseLock
+    exit 1
+}
+
+function moz_remote {
+    
+    resource=$1
+
+    /usr/lib/mozilla/mozilla-xremote-client openURL\($resource\)\;
+}
+
+function decode {
+    string=$1
+
+    #this is a CRAP way to do this.
+    string=$(echo $string  | sed 's/+/ /g')
+    string=$(echo $string  | sed 's/%3A/:/g')
+    string=$(echo $string  | sed 's/%3F/?/g')
+    string=$(echo $string  | sed 's/%3D/=/g')
+    string=$(echo $string  | sed 's/%26/\&/g')
+    string=$(echo $string  | sed 's/%26/\&/g')
+    string=$(echo $string  | sed 's/%2F/\//g')
+    string=$(echo $string  | sed 's/%21/!/g')
+    string=$(echo $string  | sed 's/%22/"/g')
+    string=$(echo $string  | sed 's/%23/#/g')
+    string=$(echo $string  | sed s/%24/$/g)
+    string=$(echo $string  | sed s/%25/%/g)
+    string=$(echo $string  | sed s/%27/\'/g)
+    string=$(echo $string  | sed s/%28/\(/g)
+    string=$(echo $string  | sed s/%29/\)/g)
+    string=$(echo $string  | sed s/%2C/,/g)
+    string=$(echo $string  | sed s/%3B/\;/g)
+    string=$(echo $string  | sed s/%3C/\</g)
+    string=$(echo $string  | sed s/%5B/[/g)
+    string=$(echo $string  | sed s/%5D/]/g)
+    string=$(echo $string  | sed s/%5E/^/g)
+    string=$(echo $string  | sed s/%60/\`/g)
+
+    #return $string
+    echo $string
+
+}
+
+function removeStaleLocks {
+
+    MIN_MINUTES=5
+
+    for i in `seq $INSTANCE_COUNT` ; do
+        
+        LOCK_FILE=/tmp/webthumb-$i.lock
+
+        result=$(find $LOCK_FILE -cmin $MIN_MINUTES 2> /dev/null)
+    
+        #if our lock file is > 5 minutes old we can delete it.
+        if [ "$result" != "$LOCK_FILE" ]; then
+            log "Lock file $LOCK_FILE is stale... removing"
+            rm -f $LOCK_FILE
+        fi
+
+    done
+
+}
+
+function removeStaleLockFile {
+
+    LOCK_FILE=$1
+    MIN_MINUTES=5
+
+    result=$(find $LOCK_FILE -cmin +$MIN_MINUTES 2> /dev/null)
+
+    #if our lock file is > 5 minutes old we can delete it.
+    if [ -e $LOCK_FILE ] && [ "$result" == "$LOCK_FILE" ]; then
+        log "Lock file $LOCK_FILE is stale... removing"
+        rm -f $LOCK_FILE
+    fi
+
+}
+
+function log {
+    message=$1
+
+    if [ $LOG_ENABLED = true ]; then
+        echo $message >> $LOG_FILE
+    fi
+
+}
+
+function makeLock {
+
+    while [ true ]; do
+
+        #FIXME: try ALL lock file combinations to find the FIRST one...
+
+        for i in `seq $INSTANCE_COUNT` ; do
+
+            LOCK_FILE=/tmp/webthumb-$i.lock
+
+            #remove this lockfile if it's gone stale
+            removeStaleLockFile $LOCK_FILE
+
+            if [ ! -e $LOCK_FILE ] && [ `tempfile --name /tmp/webthumb-$i.lock 2> /dev/null` ]; then 
+
+                #set display to use the correct XVFB
+
+                log "Going to use display: $i"
+                export DISPLAY=:$i
+
+                MOZILLA_LOG=/tmp/webthumb-$i.dat
+                LOG_FILE=/tmp/webthumb-$i.log
+
+                log "Webthumb lock $LOCK_FILE for id: $i - $RESOURCE"
+
+                return
+
+            fi 
+
+        done
+
+        #FIXME: use SLEEP_INTERVAL
+        sleep 1 #sleep between iterations
+
+    done 
+
+}
+
+function releaseLock {
+    rm -rf $LOCK_FILE 2> /dev/null
+}
+
+function doDisplayForm {
+
+    echo "Content-Type: text/html"
+    echo 
+    echo "<html>"
+    echo "<body>"
+    echo "<center>"
+
+    echo "<form>"
+    echo "Resource: "
+    echo "<br>"
+    echo "<input name='resource'>"
+    echo "<br>"
+
+#     echo "<select name=width>"
+#     echo "<option value=200>200</option>"
+#     echo "<option value=48>48</option>"
+#     echo "</select>"
+
+    echo "<br>"
+    echo "<input type='submit'>"
+    echo "</form>"
+
+    echo "<form action='webthumb-preview.cgi'>"
+    echo "<input type='submit' value='preview'>"
+    echo "</form>"
+
+    echo "</center>"
+    echo "</body>"
+    echo "</html>"
+
+}
+
+function resetMozillaLog {
+    log "Reseting Mozilla log"
+    echo > $MOZILLA_LOG
+}
+
+function waitForPageLoad {
+
+    resource=$1
+
+    log "Waiting for $resource to load..."
+
+    i=0
+
+    while [ true ]; do
+
+        #FIXME: make this string easier to recognize and grep MUST for it to
+        #prevent another page loading resulting in a correct thumbnail.
+
+        error=$(grep -a 'Error loading ' $MOZILLA_LOG)
+        success=$(grep -a --regexp 'Document .* loaded successfully' $MOZILLA_LOG)
+
+        # 'loaded successfully' needs to be included
+        if [ "$success" != "" ]; then
+            #reset the log file
+            log "success: $success"
+            resetMozillaLog
+            break
+        fi
+        
+        if [ "$error" != "" ]; then
+            #reset the log file
+            resetMozillaLog
+            log "HTTP Error detected in $MOZILLA_LOG loading resource: $error"
+            errorLoadingThumbnail
+        fi 
+
+        if [ "$i" = "$MAX_INTERVAL" ]; then
+            #FIXME: we need to exit the script here with a 404
+            log "Failed to wait for $resource to load"
+            errorLoadingThumbnail
+        fi 
+
+        log "Sleep ... $i"
+        sleep $SLEEP_INTERVAL
+        i=$(echo $i + $SLEEP_INTERVAL | bc)
+
+    done
+
+}
+
+function errorLoadingThumbnail {
+    
+    #FIXME: correctly use an HTTP error code here.
+    releaseLock
+    log "Error generating thumbnail..."
+
+    echo "Status: 400 Bad Request"
+
+    exit
+}
+
+### BEGIN CUSTOM VARIABLES ###
+
+TMPDIR=/var/www/webthumb
+
+### END CUSTOM VARIABLES ###
+
+#FIXME: what about URL decoding?
+RESOURCE=$(echo $QUERY_STRING | sed 's/resource=//')
+#WIDTH=$(echo $QUERY_STRING | sed 's/width=[^&]+//')
+
+WIDTH=200
+
+if [ "$WIDTH" == "" ]; then
+    WIDTH=200
+fi
+
+if [ "$RESOURCE" = "" ]; then 
+    doDisplayForm
+    exit
+fi
+
+RESOURCE=$(decode $RESOURCE)
+
+makeLock
+
+resetMozillaLog
+
+#tell mozilla to clear the screen so we start with a fresh slate.
+
+#it's important to start out with NOTHING (a blank page)
+moz_remote about:
+
+#FIXME: this WON'T work because we're waiting for about:blank to load
+waitForPageLoad "about:blank"
+resetMozillaLog
+
+#tell the URL to load in Mozilla
+#FIXME: if this fails we need to abort 
+log "Loading resource $RESOURCE"
+moz_remote $RESOURCE
+
+#FIXME: replace with updated code..  This needs to spin until Mozilla logs that
+#it has written the file.
+
+waitForPageLoad "$RESOURCE"
+/usr/bin/X11/xrefresh \
+    || die "Unable to xrefresh" 
+
+sleep 2 #for safety... don't want to do this too soon.
+
+log "Generating screenshot to $TMPDIR/screenshot-$DISPLAY.jpg"
+
+import -quality 100 -window root $TMPDIR/screenshot-$DISPLAY.jpg \
+    || die "Failed to import image" 
+
+log $(ls $TMPDIR)
+
+THUMBNAIL=$(date +%s)-$DISPLAY.jpg
+log "Cropping screenshot..."
+
+#grab the mozilla scren.
+# need to subtract 15 from x and 124 from the bottom.
+convert -crop 785x460+0+105 $TMPDIR/screenshot-$DISPLAY.jpg $TMPDIR/screenshot-cropped-$DISPLAY.jpg \
+    || die "Failed on first convert" 
+
+#crop 400 bytes
+#convert -crop 250x250+0+0 $TMPDIR/screenshot-cropped-$DISPLAY.jpg $TMPDIR/screenshot-cropped-$DISPLAY.jpg
+
+log "Scaling screenshot..."
+convert -quality 75 -scale $WIDTHx$WIDTH $TMPDIR/screenshot-cropped-$DISPLAY.jpg $TMPDIR/$THUMBNAIL \
+    || die "Failed on second convert" 
+
+releaseLock
+log "Done $URLBASE/$THUMBNAIL"
+
+#now redirect to the newly created thumbnail with the Location header.
+#echo "HTTP/1.0 302 Redirect"
+#echo
+echo "Pragma: No-Cache"
+echo "Status: 302 Found"
+echo "Location: $URLBASE/$THUMBNAIL"
+echo

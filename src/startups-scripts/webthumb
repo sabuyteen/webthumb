@@ -1,0 +1,140 @@
+#!/bin/sh
+
+INSTANCE_COUNT=10
+
+#Moz profile info
+PROF_BASE=/root/.mozilla
+PROF_NAME=default
+
+#FIXME: it should be possible to LS for the salt.
+PROF_DEFAULT_ROOT=/root/.mozilla/default/
+
+PROF_SALT=$(ls -1 $PROF_DEFAULT_ROOT)
+
+function startup_x {
+
+    #the ID of the server to startup
+    xid=$1
+
+    #FIXME: this is kind of chatty
+    # Starting webthumb...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+    # localhost being added to access control list
+    # Starting Mozilla...
+    # Starting Xvfb...
+
+    MOZILLA_LOG=/tmp/webthumb-$xid.dat
+
+    echo Starting Xvfb...
+    #/usr/bin/X11/Xvfb :1 -screen 1 800x600x16 &
+
+    /usr/bin/Xvfb :$xid -screen 0 800x600x16 2> /dev/null & 
+
+    #set display to use XVFB
+    export DISPLAY=:$xid
+
+    #make sure we sleep so that Xvfb is running on this console..
+    sleep 1
+
+    #allow anyone to connect?  
+    /usr/bin/X11/xhost +localhost 
+
+    #make sure the log has correct security.
+    touch $MOZILLA_LOG
+    chmod a+rw $MOZILLA_LOG
+
+    echo Starting Mozilla...
+
+    #just in case...
+    mozilla -CreateProfile default-$xid
+
+    #now figure out the salt (this sux)
+
+    echo "Using salt: $PROF_SALT"
+
+    PROF_ROOT=$PROF_BASE/$PROF_NAME-$xid
+    #expand the salt we're using here...
+    PROF_ROOT=$PROF_ROOT/$(ls -1 $PROF_ROOT)
+
+    echo "Installing default profile into: $PROF_ROOT..."
+    cp -r $PROF_DEFAULT_ROOT/$PROF_SALT/* $PROF_ROOT
+    echo "Installing default profile into: $PROF_ROOT...done"
+
+    #remove old lock file
+    rm -f $PROF_ROOT/lock 2> /dev/null
+
+    /usr/bin/mozilla-safe -P default-$xid about:blank > $MOZILLA_LOG &
+
+}
+
+function start {
+
+    echo Starting $INSTANCE_COUNT webthumb instances...
+    
+    for i in `seq $INSTANCE_COUNT` ; do
+        startup_x $i
+    done 
+
+}
+
+function stop {
+
+    echo Stopping webthumb...
+
+    killall mozilla-safe 2> /dev/null
+    killall mozilla-bin 2> /dev/null
+
+    echo Waiting for Mozilla to stop...        
+        #wait for the Moz process to stop clean
+    sleep 3 
+    echo Waiting for Mozilla to stop...done
+
+    echo Waiting for Xvfb to stop...        
+    killall Xvfb 2> /dev/null
+        #wait for these to stop and kill them again but -9 this time
+    sleep 3
+    echo Waiting for Xvfb to stop...done
+
+    pkill -9 -U www-data import
+    pkill -9 -U www-data convert
+
+        #clean up temp files...
+    rm -f /tmp/webthumb.* 2> /dev/null
+    echo Stopping webthumb...done
+
+}
+
+case $1 in
+
+    start)
+        start
+    ;;
+
+    stop)
+        stop
+    ;;
+
+    restart)
+        stop
+        start
+    ;;
+    
+esac

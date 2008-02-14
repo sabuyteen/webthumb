@@ -1,0 +1,14 @@
+;; Object mozilla-profile/
+;; SEMANTICDB Tags save file
+(semanticdb-project-database-file "mozilla-profile/"
+  :tables (list 
+   (semanticdb-table "prefs.js"
+    :major-mode 'javascript-mode
+    :tags 'nil
+    :file "prefs.js"
+    )
+   )
+  :file "semantic.cache"
+  :semantic-tag-version "2.0pre2"
+  :semanticdb-version "2.0pre2"
+  )

@@ -1,0 +1,153 @@
+
+********************************************************************************
+*** API USAGE INSTRUCTIONS
+********************************************************************************
+
+Webthumb used a simple REST/HTTP API for fetching thumbnails. You simply fetch a
+URL with an encoded target URL of the site you wish to thumbnail.  This
+information is then passed via CGI to Mozilla which renders the thumbnail.
+You'll have to follow 302 redirects since we save the thumbnail to the
+filesystem and serve it from there.
+
+To render a thumbnail:
+
+1. Create an HTTP request to
+
+    http://webthumb.example.com/cgi-bin/webthumb.cgi
+
+    with a 'resource' URL parameter of the site you wish to thumbnail.
+
+    For exmple:
+
+    http://webthumb.example.com/cgi-bin/webthumb.cgi?resource=http://cnn.com
+
+    Would create a thumbnail to for CNN.
+
+    You can also go to:
+
+    http://webthumb.example.com/cgi-bin/webthumb.cgi
+
+    which will then generate a form for you to enter any arbitrary URL for
+    testing.
+
+    Obviously example.com should change to your domain name.
+
+    You should also be able to use standard HTTP authentication via Apache if
+    your HTTP library supports this.
+
+2.  Fetch the resulting image and save it with any mechanism you'd like.  You
+    can also serve the image right from the webthumb server if you'd like. 
+
+********************************************************************************
+*** CONFIGURATION 
+********************************************************************************
+
+The main configuration parameter is the number of Mozilla processes you need to
+run.  The more processes the faster you can render thumbnails.  This is set with
+the INSTANCE_COUNT variable in /etc/init.d/webthumb and
+/usr/lib/cgi-bin/webthumb.cgi.  Both of these need to be the same value.
+
+Note that each Mozilla process takes from 10-15M of memory so if you set this
+value too high you'll start to page which will slow down the machine.
+
+The webthumb.cgi script contains internal parameters including thumbnail size.
+You could edit these to adjust the size of the generated thumbnail.  You might
+also need to change these values if running under a Linux distribution other
+than Debian.
+
+If Flash is necessary simply following the instructions for Mozilla should allow
+it to automatically work with webthumb.
+
+Note that for security purposes Javascript has been disabled by default. You can
+edit the default prefs.js file to re-enable javascript if necessary.  
+
+********************************************************************************
+*** INSTALL  INSTRUCTIONS
+********************************************************************************
+
+- Create the webthumb directory on the local webserver.  This will be used to
+  store the rendered thumbnails.  If your webserver used a document root other
+  than /var/www you'll have to edit the webthumb.cgi file to adjust the file
+  serving location.
+
+    /var/www/webthumb
+
+- Install mozilla and XVfb
+
+    apt-get install mozilla-browser
+    apt-get install xvfb
+
+- Install imagemagik.  This is used to resize the resulting thumbnails.
+
+    apt-get install imagemagick
+
+- install fonts
+
+    apt-get install ttf-bitstream-vera
+
+    # NOTE: is xserver-common avail on Debian?
+
+    apt-get install xserver-common 
+
+    apt-get install xfonts-base \
+                    xfonts-100dpi \
+                    xfonts-75dpi \
+                    xfonts-scalable \
+                    xbase-clients \
+                    xfonts-pex
+
+    This is IMPORTANT because it won't have problems until months later:
+                    
+    http://www.mozilla.org/projects/mathml/fonts/
+                    
+                    
+- install tools (used for calculating image size)
+
+    apt-get install bc
+
+
+    
+- install apache
+
+    apt-get install apache2-mpm-prefork
+    
+- Startup Mozilla and XVfb and start in startup
+
+    cp 
+    ln -s 
+
+- Setup filesystem
+
+      mkdir /var/www/webthumb
+      chgrp -R www-data /var/www/webthumb
+      chmod -R g+w /var/www/webthumb/
+
+- Setup Mozilla
+
+    - mkdir -p /root/.mozilla/default/
+
+    - Copy the src/mozilla-profile directory into
+
+       /root/.mozilla/default/
+
+       This is used to set preferences and so forth.  A unique copy is created
+       for each Mozilla process.
+       
+    - copy en-US.jar and replace the version that ships with Mozilla.  This
+      includes a few settings to disable dialog prompts which we don't want
+      showing up in the resulting thumbnail.
+
+- make sure 'import' and 'convert' are installed and in the PATH.  These are
+  installed by Imagemagick and are required to resize the images.
+  
+- Install the src/cgi/webthumb*.cgi scripts into /usr/lib/cgi-bin
+
+- Install the src/startup-scripts/webthumb scripts into /etc/init.d and make it
+  executable.
+
+  
+== TODO ==
+
+ * I need to figure out a way to get true type fonts installed.
+
+ * 

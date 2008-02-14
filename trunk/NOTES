@@ -1,0 +1,39 @@
+=============
+
+I also need to edit necko.properties to disable auth by removing EVERY string
+that asks us about EnterPassword or such.
+
+... I also need to delete nsWebBrowserPersist since alert() requires this:
+
+http://lxr.mozilla.org/mozilla1.8/source/uriloader/exthandler/nsExternalHelperAppService.cpp#1855
+
+1875     {
+1876         nsCOMPtr<nsIStringBundle> bundle;
+1877         if (NS_SUCCEEDED(s->CreateBundle("chrome://global/locale/nsWebBrowserPersist.properties", getter_AddRefs(bundle))))
+
+============
+It seems all these chnages are probably in en-US.jar
+
+
+
+        - Go into en-US.jar and modify en-US/locale/en-US/global/commonDialogs.properties
+
+            - So that it has NO contents...  This will disable authentication
+              prompting.  See nsPromptService.cpp in the Mozilla source for more
+              information.
+
+
+    scp -rp root@robot2.tailrank.com:/root/.mozilla/default /root/.mozilla
+              
+    scp root@robot2.tailrank.com:/usr/lib/mozilla/chrome/en-US.jar \
+        /usr/lib/mozilla/chrome/en-US.jar
+              
+
+
+
+    scp src/cgi/webthumb*.cgi root@util2.tailrank.com:/usr/lib/cgi-bin
+    chmod a+rx /usr/lib/cgi-bin/webthumb*
+
+    scp src/startups-scripts/webthumb root@util2.tailrank.com:/etc/init.d 
+    chmod a+rx /etc/init.d/webthumb
+        

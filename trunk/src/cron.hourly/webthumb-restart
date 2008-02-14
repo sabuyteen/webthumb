@@ -1,0 +1,11 @@
+#!/bin/sh
+
+/etc/init.d/apache2 stop
+
+/etc/init.d/webthumb stop
+
+rm --force /tmp/*.lock
+
+/etc/init.d/webthumb start
+
+/etc/init.d/apache2 start

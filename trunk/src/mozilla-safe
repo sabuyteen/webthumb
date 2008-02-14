@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# wrapper for 'mozilla' which can restart a process when or if it were to ever dump core
+
+while [ true ]; do
+    mozilla $@
+    echo "Mozilla process failed... restarting."
+    sleep 5
+done

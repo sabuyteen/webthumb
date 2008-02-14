@@ -1,0 +1,39 @@
+
+- Fri Jan 23 2004 01:27 PM (burton@peerfear.org):
+    
+    Authentication prompts totally disabled.
+    
+- Thu Jan 22 2004 04:28 PM (burton@peerfear.org):
+
+    Javascript disabled.    
+
+- CORRECT URL decoding.  What are ALL the rules?!
+
+- No popups for software install in Mozilla
+
+- If the lock file is REALLY old we should delete it.  But HOW do we do this?
+
+    removeStaleLock needs to be called BEFORE and within makeLock 
+
+- startup script cleanup...    
+
+- FIXME: we NEED to pay attention to
+
+    Error loading URL http://www.cnn.com/
+
+    vs
+
+    Document about:blank loaded successfully
+
+- Increase the INTERVAL to something like .1 seconds.  the problem is that eval
+  can't add real numbers
+
+- we lock to make sure multiple requests don't happen at once
+
+- We need standard error handling in the CGI
+
+- The script seems to sleep FOREVER since the .1 upgrade.
+
+- The homepage in the startup script should be set to about:blank
+
+    user_pref("browser.startup.homepage", "about:blank");

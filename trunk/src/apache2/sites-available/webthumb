@@ -1,0 +1,22 @@
+NameVirtualHost *
+
+<VirtualHost *>
+	ServerAdmin webmaster@localhost
+	
+	ServerName webthumb1.sofari.com
+ 
+	DocumentRoot /var/www/webthumb
+
+    <Directory />
+		Options FollowSymLinks ExecCGI
+	</Directory>
+
+    ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+    <Directory "/usr/lib/cgi-bin">
+            AllowOverride None
+            Options ExecCGI
+            Order allow,deny
+            Allow from all
+    </Directory>
+
+</VirtualHost>

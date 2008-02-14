@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Removing older webthumb images ..."
+find /var/www/webthumb/ -name "*.jpg" -mtime +7 -exec rm --verbose "{}" ";"
+echo "Removing older webthumb images ...done"

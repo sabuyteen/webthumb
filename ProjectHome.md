@@ -1,0 +1,1 @@
+REST API for generating thumbnails from Mozilla.
